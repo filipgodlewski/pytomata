@@ -119,11 +119,9 @@ write an issue.
 Version History
 """""""""""""""
 
-CHANGELOG.md_
-.. _CHANGELOG.md: CHANGELOG.md
+`CHANGELOG.md <CHANGELOG.md>`_
 
 License
 """""""
 
-`The MIT License`_
-.. _`The MIT License`: LICENSE
+`The MIT License <LICENSE>`_
