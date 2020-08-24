@@ -13,6 +13,7 @@ If you love Pyenv_ and pyenv-virtualenv_ but don't like the manual work;
 If you ever forgot to activate virtualenv and installed pip packages globally;
 If you have heard about direnv but think that it is too much for you needs;
 If you don't like to bloat your git repository with unnecessary files;
+
 .. _Pyenv: https://github.com/pyenv/pyenv
 .. _pyenv-virtualenv: https://github.com/pyenv/pyenv-virtualenv
 
@@ -49,6 +50,7 @@ for example::
     # which effectively will run `automata` on every `cd` command
 
 Please note that Pytomata currently requires fzf_. It won't work without it!
+
 .. _fzf: https://github.com/junegunn/fzf
 
 Usage
@@ -106,6 +108,7 @@ Development
 
 The Pytomata source code is `hosted on GitHub`_.
 It is meant to be clean, simple and easily hackable.
+
 .. _`hosted on GitHub`: https://github.com/filipgodlewski/pytomata
 
 Contributing
