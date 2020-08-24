@@ -119,9 +119,11 @@ write an issue.
 Version History
 """""""""""""""
 
-:doc:`CHANGELOG.md <CHANGELOG.md>`
+CHANGELOG.md_
+.. _CHANGELOG.md: CHANGELOG.md
 
 License
 """""""
 
-:doc:`The MIT License <LICENSE>`
+`The MIT License`_
+.. _`The MIT License`: LICENSE
