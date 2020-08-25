@@ -32,7 +32,9 @@ Installation
 Currently the only tested way of installing Pytomata is through git submodules,
 though a simple git clone should work as well without a doubt.
 
-In order to install Pytomata, type in your zsh-powered terminal::
+In order to install Pytomata, type in your zsh-powered terminal:
+
+.. code:: bash
 
     git clone https://github.com/filipgodlewski/pytomata.git
 
@@ -40,7 +42,9 @@ In order to install Pytomata, type in your zsh-powered terminal::
     git submodule add https://github.com/filipgodlewski/pytomata.git
 
 Secondly, you will have to source Pytomata into your .zshrc file by,
-for example::
+for example:
+
+.. code:: bash
 
     source ~/.local/share/zsh/plugins/pytomata/pytomata.zsh
 
