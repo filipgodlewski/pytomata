@@ -99,7 +99,6 @@ uppip() {
 
 upenv() {
     not_venv="You must first activate the target venv. Aborting."
-    cannot_upgrade="Cannot upgrade. $current_version is the only Python version installed. Aborting."
 
     [[ ! $VIRTUAL_ENV ]] && echo $not_venv && return 1
     current_venv=$(pyenv version-name)
@@ -108,7 +107,7 @@ upenv() {
     available_versions[(r)$current_version]=()
     echo -n "Current venv version: "; echo $current_version
     if [[ $#available_versions -eq 0 ]]; then
-        echo $cannot_upgrade
+        echo "Cannot upgrade. $current_version is the only Python version installed. Aborting."
         return 1
     elif [[ $#available_versions -eq 1 ]]; then
         answer=1
