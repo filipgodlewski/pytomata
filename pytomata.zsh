@@ -31,10 +31,13 @@ delenv() {
 }
 
 denv() {
-    if [[ $VIRTUAL_ENV ]] && [[ ! $PYTOMATA_ON ]]; then
-        deactivate
-    else
+    if [[ $VIRTUAL_ENV ]] && [[ $PYTOMATA_ON ]]; then
         pyenv deactivate 2> /dev/null && {export PATH="$original_path"; unset PYTOMATA_ON}
+        return 0
+    elif [[ $VIRTUAL_ENV ]] && [[ ! $PYTOMATA_ON ]]; then
+        return 0
+    else
+        return 1
     fi
 }
 
@@ -149,7 +152,10 @@ upenv() {
 
 automata() {
     denv
+    retval=$?
     cat .env 2>/dev/null | grep -qw "HAS_PYENV_VIRTUALENV=\'true\'" || return 0
-    find ~/.pyenv/versions -maxdepth 1 -type l | rev | cut -d"/" -f1 | rev | grep -qw "${PWD##*/}" && aenv ${PWD##*/}
+    if [[ $retval -eq 1 ]]; then
+        find ~/.pyenv/versions -maxdepth 1 -type l | rev | cut -d"/" -f1 | rev | grep -qw "${PWD##*/}" && aenv ${PWD##*/}
+    fi
     return 0
 }
