@@ -6,22 +6,23 @@ addenv() {
 
 aenv() {
     original_path="$PATH"
-    if [ -z "$1" ]; then
+    if [[ ! $1 ]]; then
         VENV=$(pyenv virtualenvs --bare --skip-aliases | cut -d"/" -f3 | fzf)
-        [ ! -z $VENV ] && pyenv activate $VENV || return 1
+        [[ $VENV ]] && pyenv activate $VENV || return 1
     else
         pyenv activate $1
     fi
+    PYTOMATA_ON="true"
     export PATH="$VIRTUAL_ENV:$PATH"
 }
 
 delenv() {
     on_venv="A virtual env is active, please deactivate it first. Aborting."
 
-    [ ! -z $(echo -n $VIRTUAL_ENV) ] && echo $on_venv && return 1
-    venv=( $(pyenv virtualenvs --skip-aliases | cut -d" " -f3 | fzf -m) )
+    [[ $VIRTUAL_ENV ]] && {echo $on_venv; return 1}
+    venv=($(pyenv virtualenvs --skip-aliases | cut -d" " -f3 | fzf -m))
     for item in $venv; do
-        if [ ! -z $item ]; then
+        if [[ $item ]]; then
             pyenv virtualenv-delete -f $item
             echo "Deleted venv: $item"
         fi
@@ -30,7 +31,11 @@ delenv() {
 }
 
 denv() {
-    pyenv deactivate 2> /dev/null && export PATH="$original_path"
+    if [[ $VIRTUAL_ENV ]] && [[ ! $PYTOMATA_ON ]]; then
+        deactivate
+    else
+        pyenv deactivate 2> /dev/null && {export PATH="$original_path"; unset PYTOMATA_ON}
+    fi
 }
 
 mkenv() {
@@ -39,8 +44,8 @@ mkenv() {
     on_venv="A virtual env is active, please deactivate it first. Aborting."
 
     virtualenvs=($(pyenv virtualenvs --bare --skip-aliases | cut -d"/" -f3))
-    [ ${virtualenvs[(Ie)${PWD##*/}]} -ne 0 ] && echo $has_venv && return 1
-    [ ! -z $(echo -n $VIRTUAL_ENV) ] && echo $on_venv && return 1
+    [[ ${virtualenvs[(Ie)${PWD##*/}]} -ne 0 ]] && echo $has_venv && return 1
+    [[ $VIRTUAL_ENV ]] && echo $on_venv && return 1
     echo "Creating new virtual environment.\n"
     case $confirm in
         -y) ;;
@@ -56,10 +61,10 @@ mkenv() {
             ;;
     esac
     available_versions=($(pyenv versions --bare --skip-aliases | grep -v "/"))
-    if [ $#available_versions -lt 1 ]; then
+    if [[ $#available_versions -lt 1 ]]; then
         echo "No Python versions? Aborting."
         return 1
-    elif [ $#available_versions -eq 1 ]; then
+    elif [[ $#available_versions -eq 1 ]]; then
         answer=1
     else
         echo "The list of available Python versions:"
@@ -70,7 +75,7 @@ mkenv() {
         echo -n "Which version would you like to choose [index]? "
         read answer; echo
     fi
-    if [ -z $answer ] || [ $answer -lt 1 ] || [ $answer -gt $#available_versions ]; then
+    if [[ ! $answer ]] || [[ $answer -lt 1 ]] || [[ $answer -gt $#available_versions ]]; then
         echo "Wrong index provided. Aborting."
         return 1
     fi
@@ -85,7 +90,7 @@ mkenv() {
 uppip() {
     not_venv="You must first activate the target venv. Aborting."
 
-    [ -z $(echo -n $VIRTUAL_ENV) ] && echo $not_venv && return 1
+    [[ ! $VIRTUAL_ENV ]] && echo $not_venv && return 1
     pip list --outdated --format freeze | sed 's/==.*//' | xargs -n1 pip -q install --use-feature=2020-resolver -U
 }
 
@@ -93,16 +98,16 @@ upenv() {
     not_venv="You must first activate the target venv. Aborting."
     cannot_upgrade="Cannot upgrade. $current_version is the only Python version installed. Aborting."
 
-    [ -z $(echo -n $VIRTUAL_ENV) ] && echo $not_venv && return 1
+    [[ ! $VIRTUAL_ENV ]] && echo $not_venv && return 1
     current_venv=$(pyenv version-name)
     current_version=$(pyenv virtualenv-prefix | rev | cut -d"/" -f1 | rev)
     available_versions=($(pyenv versions --bare --skip-aliases | grep -v "/"))
     available_versions[(r)$current_version]=()
     echo -n "Current venv version: "; echo $current_version
-    if [ $#available_versions -eq 0 ]; then
+    if [[ $#available_versions -eq 0 ]]; then
         echo $cannot_upgrade
         return 1
-    elif [ $#available_versions -eq 1 ]; then
+    elif [[ $#available_versions -eq 1 ]]; then
         answer=1
         echo -n "Will upgrade to Python $available_versions[$answer]. Proceed [Y/n]? "
         read response; echo
@@ -119,7 +124,7 @@ upenv() {
         echo -n "Which version would you like to choose [index]? "
         read answer; echo
     fi
-    if [ -z $answer ] || [ $answer -lt 1 ] || [ $answer -gt $#available_versions ]; then
+    if [[ ! $answer ]] || [[ $answer -lt 1 ]] || [[ $answer -gt $#available_versions ]]; then
         echo "Wrong index provided. Aborting."
         return 1
     fi
@@ -131,15 +136,14 @@ upenv() {
     aenv $current_venv
     pip -q install -r TMP_pip_list
     rm TMP_pip_list
-    if [ ! -z "$(pip list --outdated)" ]; then
+    if [[ "$(pip list --outdated)" ]]; then
         echo "Some of the packages are outdated."
         echo -n "Would you like to update all of them [Y/n]? "
         read answer; echo
         case $answer in
-            [yY]|"") ;;
+            [yY]|"") uppip;;
             *) echo "Finished."; return 0;;
         esac
-        uppip
     fi
 }
 
