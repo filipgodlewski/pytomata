@@ -1,7 +1,17 @@
 #!/bin/zsh
 
 addenv() {
-    cat .env 2>/dev/null | grep -qw "HAS_PYENV_VIRTUALENV=\'true\'" || echo "HAS_PYENV_VIRTUALENV='true'" >> .env
+    dir_path=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [[ ! $dir_path ]]; then
+        dir_path=$PWD
+    fi
+    pytomata_file="$(pyenv root)/pytomata"
+    if [[ ! $(cat ${pytomata_file} 2>/dev/null | grep -qw "${dir_path}") ]]; then
+        echo "${dir_path}" >> ${pytomata_file}
+        sort -r $pytomata_file > $pytomata_file
+        return 0
+    fi
+    return 1
 }
 
 aenv() {
@@ -152,9 +162,9 @@ upenv() {
 automata() {
     denv
     retval=$?
-    cat .env 2>/dev/null | grep -qw "HAS_PYENV_VIRTUALENV=\'true\'" || return 0
+    addenv || return 0
     if [[ $retval -eq 1 ]]; then
-        find ~/.pyenv/versions -maxdepth 1 -type l | rev | cut -d"/" -f1 | rev | grep -qw "${PWD##*/}" && aenv ${PWD##*/}
+        find ~/.pyenv/versions -maxdepth 1 -type l | rev | cut -d"/" -f1 | rev | grep -qw "${dir_path##*/}" && aenv ${dir_path##*/}
     fi
     return 0
 }
