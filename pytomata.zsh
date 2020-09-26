@@ -1,160 +1,215 @@
 #!/bin/zsh
 
-addenv() {
-    cat .env 2>/dev/null | grep -qw "HAS_PYENV_VIRTUALENV=\'true\'" || echo "HAS_PYENV_VIRTUALENV='true'" >> .env
-}
+PYTOMATA_FILE="$(pyenv root)/pytomata"
 
-aenv() {
-    original_path="$PATH"
-    if [[ ! $1 ]]; then
-        VENV=$(pyenv virtualenvs --bare --skip-aliases | cut -d"/" -f3 | fzf)
-        [[ $VENV ]] && pyenv activate $VENV || return 1
-    else
-        pyenv activate $1
-    fi
+__activate_pytomata_venv() {
+    dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
+    ORIGINAL_PATH="$PATH"
+    pyenv activate ${dir_path##*/} 2> /dev/null
     PYTOMATA_ON="true"
     export PATH="$VIRTUAL_ENV:$PATH"
+    unset dir_path
 }
 
-delenv() {
-    on_venv="A virtual env is active, please deactivate it first. Aborting."
-
-    [[ $VIRTUAL_ENV ]] && {echo $on_venv; return 1}
-    venv=($(pyenv virtualenvs --skip-aliases | cut -d" " -f3 | fzf -m))
-    for item in $venv; do
-        if [[ $item ]]; then
-            pyenv virtualenv-delete -f $item
-            echo "Deleted venv: $item"
-        fi
-    done
-    return 0
+__deactivate_pytomata_venv() {
+    pyenv deactivate
+    export PATH="$ORIGINAL_PATH"
+    unset PYTOMATA_ON
+    unset ORIGINAL_PATH
 }
 
-denv() {
-    if [[ $VIRTUAL_ENV ]] && [[ $PYTOMATA_ON ]]; then
-        pyenv deactivate 2> /dev/null && {export PATH="$original_path"; unset PYTOMATA_ON}
-        return 0
-    elif [[ $VIRTUAL_ENV ]] && [[ ! $PYTOMATA_ON ]]; then
+__add_dir_path() {
+    dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
+    echo "${dir_path##*/}" >> ${PYTOMATA_FILE}
+    echo "${dir_path}" >> ${PYTOMATA_FILE}
+    unset dir_path
+}
+
+__is_git_repo() {
+    git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
+    [[ ${git_root} ]] && {unset git_root; return 0} || {unset git_root; return 1}
+}
+
+__on_venv() {
+    [[ $VIRTUAL_ENV ]] && return 0 || return 1
+}
+
+__on_pytomata_venv() {
+    if [[ ${VIRTUAL_ENV} ]] && [[ ${PYTOMATA_ON} ]]; then
         return 0
     else
         return 1
     fi
 }
 
-mkenv() {
-    confirm="$1"
-    has_venv="A virtual env for this project already exists. Aborting."
-    on_venv="A virtual env is active, please deactivate it first. Aborting."
-
+__pyenv_venv_exists() {
     virtualenvs=($(pyenv virtualenvs --bare --skip-aliases | cut -d"/" -f3))
-    [[ ${virtualenvs[(Ie)${PWD##*/}]} -ne 0 ]] && echo $has_venv && return 1
-    [[ $VIRTUAL_ENV ]] && echo $on_venv && return 1
-    echo "Creating new virtual environment.\n"
-    case $confirm in
-        -y) ;;
-        *)
-            echo "You are currently in the directory:"
-            echo $PWD
-            echo -n "Proceed [Y/n]? "
-            read answer; echo
-            case $answer in
-                [yY]|"") ;;
-                *) echo "Aborting."; return 1;;
-            esac
-            ;;
-    esac
-    available_versions=($(pyenv versions --bare --skip-aliases | grep -v "/"))
-    if [[ $#available_versions -lt 1 ]]; then
-        echo "No Python versions? Aborting."
-        return 1
-    elif [[ $#available_versions -eq 1 ]]; then
-        answer=1
+    if [[ ${virtualenvs[(Ie)${PWD##*/}]} -ne 0 ]]; then
+        unset virtualenvs
+        return 0
     else
-        echo "The list of available Python versions:"
-        for version in ${available_versions}; do
-            printf "%s\t" "[${COLOR_MAGENTA}${available_versions[(i)$version]}${COLOR_NORMAL}]"
-            echo $version
-        done
-        echo -n "Which version would you like to choose [index]? "
-        read answer; echo
-    fi
-    if [[ ! $answer ]] || [[ $answer -lt 1 ]] || [[ $answer -gt $#available_versions ]]; then
-        echo "Wrong index provided. Aborting."
+        unset virtualenvs
         return 1
     fi
-    echo "Creating and activating venv called: ${PWD##*/}"
-    pyenv virtualenv ${available_versions[$answer]} ${PWD##*/} &> /dev/null
-    aenv ${PWD##*/}
-    echo "Upgrading pip and installing wheel"
-    pip -q install --upgrade pip setuptools; pip -q install wheel
-    addenv
 }
 
-uppip() {
-    not_venv="You must first activate the target venv. Aborting."
+__remove_pytomata_venv() {
+    sed "/$1$/d" $PYTOMATA_FILE > $PYTOMATA_FILE
+}
 
-    [[ ! $VIRTUAL_ENV ]] && echo $not_venv && return 1
+__sort_pytomata_file() {
+    if [[ $(cat $PYTOMATA_FILE | wc -l) > 1 ]]; then
+        sort -r "$(cat $PYTOMATA_FILE)" > $PYTOMATA_FILE
+    fi
+}
+
+__update_pip_packages() {
     pip list --outdated --format freeze | sed 's/==.*//' | xargs -n1 pip -q install --use-feature=2020-resolver -U
 }
 
-upenv() {
-    not_venv="You must first activate the target venv. Aborting."
-
-    [[ ! $VIRTUAL_ENV ]] && echo $not_venv && return 1
-    current_venv=$(pyenv version-name)
-    current_version=$(pyenv virtualenv-prefix | rev | cut -d"/" -f1 | rev)
-    available_versions=($(pyenv versions --bare --skip-aliases | grep -v "/"))
-    available_versions[(r)$current_version]=()
-    echo -n "Current venv version: "; echo $current_version
-    if [[ $#available_versions -eq 0 ]]; then
-        echo "Cannot upgrade. $current_version is the only Python version installed. Aborting."
-        return 1
-    elif [[ $#available_versions -eq 1 ]]; then
-        answer=1
-        echo -n "Will upgrade to Python $available_versions[$answer]. Proceed [Y/n]? "
-        read response; echo
-        case $response in
-            [yY]|"") ;;
-            *) echo "Aborting."; return 1;;
-        esac
+__pytomata_venv_exists() {
+    dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
+    full_grep="$(grep -x "${dir_path}" ${PYTOMATA_FILE} 2> /dev/null)"
+    unset dir_path
+    if [[ ${full_grep} ]]; then
+        unset full_grep
+        return 0
     else
-        echo "The list of available python versions:"
-        for version in ${available_versions}; do
-            printf "%s\t" "[${COLOR_MAGENTA}${available_versions[(i)$version]}${COLOR_NORMAL}]"
-            echo $version
-        done
-        echo -n "Which version would you like to choose [index]? "
-        read answer; echo
-    fi
-    if [[ ! $answer ]] || [[ $answer -lt 1 ]] || [[ $answer -gt $#available_versions ]]; then
-        echo "Wrong index provided. Aborting."
+        unset full_grep
         return 1
-    fi
-    pip list --format freeze > TMP_pip_list
-    denv
-    pyenv virtualenv-delete -f $current_venv
-    echo "Upgrading venv to Python $available_versions[$answer]. Might take a while."
-    pyenv virtualenv ${available_versions[$answer]} $current_venv $> /dev/null
-    aenv $current_venv
-    pip -q install -r TMP_pip_list
-    rm TMP_pip_list
-    if [[ "$(pip list --outdated)" ]]; then
-        echo "Some of the packages are outdated."
-        echo -n "Would you like to update all of them [Y/n]? "
-        read answer; echo
-        case $answer in
-            [yY]|"") uppip;;
-            *) echo "Finished."; return 0;;
-        esac
     fi
 }
 
-automata() {
-    denv
-    retval=$?
-    cat .env 2>/dev/null | grep -qw "HAS_PYENV_VIRTUALENV=\'true\'" || return 0
-    if [[ $retval -eq 1 ]]; then
-        find ~/.pyenv/versions -maxdepth 1 -type l | rev | cut -d"/" -f1 | rev | grep -qw "${PWD##*/}" && aenv ${PWD##*/}
-    fi
+_check_pytomata_setup() {
+    __is_git_repo || return 1
+    __on_venv && return 1
+    __pyenv_venv_exists && return 1
+    __pytomata_venv_exists && return 1
+    __on_pytomata_venv && return 1
     return 0
+}
+
+_activate_pytomata_venv() {
+    __is_git_repo || return 1
+    __pytomata_venv_exists || return 1
+    __on_pytomata_venv && return 0
+    __on_venv && return 1
+    __activate_pytomata_venv
+}
+
+_deactivate_pytomata_venv() {
+    __on_pytomata_venv && __deactivate_pytomata_venv
+}
+
+_delete_pytomata_venv() {
+    __is_git_repo || return 1
+    __pytomata_venv_exists || return 1
+    dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
+    pyenv virtualenv-delete -f ${dir_path##*/} || return 1
+    __remove_pytomata_venv ${dir_path##*/}
+    unset dir_path
+}
+
+_add_pytomata_venv() {
+    # Add pytomata project directory into the pytomata list.
+    __is_git_repo || return 1
+    __pytomata_venv_exists
+    if [[ $? -eq 1 ]]; then
+        __add_dir_path
+        __sort_pytomata_file
+        unset dir_path
+        return 0
+    else
+        unset dir_path
+        return 1
+    fi
+}
+
+_delete_pyenv_venv() {
+    __deactivate_pytomata_venv
+    dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
+    pyenv virtualenv-delete -f ${dir_path##*/}
+    unset dir_path
+}
+
+_create_pyenv_venv() {
+    dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
+    pyenv virtualenv \
+        $(pyenv versions --bare --skip-aliases | grep -v "/" | fzf --header="Select python version of your interest.") \
+        ${dir_path##*/} $> /dev/null || return 1
+    unset dir_path
+    __activate_pytomata_venv
+}
+
+_update_pip_packages() {
+    [[ "$(pip list --outdated)" ]] && __update_pip_packages
+}
+
+automata() {
+    # Make pyenv virtual environments magical.
+    _activate_pytomata_venv || _deactivate_pytomata_venv
+}
+
+aenv() {
+    # Activate pyenv virtual environment.
+    _activate_pytomata_venv || {echo "ERROR: Cannot activate virtual environment"; return 1}
+}
+
+denv() {
+    # Deactivate pyenv virtual environment.
+    #
+    # Does not work with non-pyenv virtual environments.
+    _deactivate_pytomata_venv || {echo "ERROR: Cannot deactivate virtual environment."; return 1}
+}
+
+delenv() {
+    # Delete a pyenv virtual environments from the pytomata list.
+    _deactivate_pytomata_venv || {echo "ERROR: Cannot deactivate virtual environment."; return 1}
+    _delete_pytomata_venv || {echo "ERROR: Cannot delete virtual environment."; return 1}
+    echo "INFO: Virtual environment(s) deleted."
+}
+
+mkenv() {
+    # Create new pyenv virtual environment that will work automatically under pytomata.
+    #
+    # Takes the current git project's root directory as name.
+    _check_pytomata_setup || {echo "ERROR: Requirements not fulfilled."; return 1}
+    echo "INFO: Creating new pytomata virtual environment."
+    echo -n "INPUT: Proceed [Y/n]? "
+    read answer; echo
+    case $answer in
+        [yY]|"") unset answer;;
+        *) echo "INFO: Aborting."; unset answer; return 1;;
+    esac
+    _create_pyenv_venv || return 1
+    _add_pytomata_venv
+    echo "INFO: Installed new pytomata virtual environment."
+    echo "INFO: Upgrading pip and installing wheel."
+    pip -q install --upgrade pip setuptools
+    pip -q install wheel
+    echo "INFO: Finished pytomata virtual environment setup."
+}
+
+uppip() {
+    # Update all outdated pip packages from the target pyenv virtual environment.
+    #
+    # Applies only to the pyenv virtual environments from the pytomata list.
+    _activate_pytomata_venv || {echo "ERROR: Cannot activate virtual environment."; return 1}
+    _update_pip_packages || {echo "INFO: Every pip package is up to date."; return 0}
+}
+
+upenv() {
+    # Upgrade Python version of the target pytomata virtual environment from the pytomata list.
+    #
+    # Upgrade is a brachylogy. User can actually downgrade as well.
+    # After the upgrade/downgrade it check if any packages are outdated, and
+    # updates them if the user wants to.
+    _activate_pytomata_venv || {echo "ERROR: Cannot activate virtual environment."; return 1}
+    echo "INFO: Upgrading Python version of the current pyenv virtual environment."
+    pip list --format freeze > TMP_pip_list
+    _delete_pyenv_venv
+    _create_pyenv_venv || {echo "ERROR: Operation aborted."; return 1}
+    pip -q install -r TMP_pip_list
+    rm TMP_pip_list
+    echo "INFO: Finished upgrading the Python version."
 }
