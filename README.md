@@ -71,11 +71,6 @@ Additionally adds $VIRTUAL_ENV into your $PATH
 which is very useful when working with vim.
 
 ```zsh
-automata
-```
-The brain of Pytomata. Remember to add it into your .zshrc's chpwd() function!
-
-```zsh
 delenv
 ```
 Delete any unwanted pyenv-virtualenvs with the fuzzy finding engine
@@ -113,6 +108,11 @@ a temporary file called `TMP_pip_list`, delete your old virtualenv
 and setup a new one.
 Finally, if it finds out that some of the packages are outdated,
 it will ask for an update.
+
+```zsh
+automata
+```
+The brain of Pytomata. Remember to add it into your .zshrc's chpwd() function!
 
 ### Development
 
