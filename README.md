@@ -6,12 +6,10 @@ Pytomata is the automation for pyenv-virtualenv you always wanted.
 Written as simple zsh functions, Pytomata's goal is to provide the user
 with the simplest solution for the Python venv headache.
 
-If you love [Pyenv](https://github.com/pyenv/pyenv) and
-[pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
-but don't like the manual work;
-If you ever forgot to activate virtualenv and installed pip packages globally;
-If you have heard about direnv but think that it is too much for you needs;
-If you don't like to bloat your git repository with unnecessary files;
+* If you love [Pyenv](https://github.com/pyenv/pyenv) and [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) but don't like the manual work;
+* If you ever forgot to activate virtualenv and installed pip packages globally;
+* If you have heard about direnv but think that it is too much for you needs;
+* If you don't like to bloat your git repository with unnecessary files;
 
 **Then Pytomata is for you!**
 
@@ -21,6 +19,13 @@ Though Pytomata currently supports only zsh, the goal is to extend
 its functionality into other languages as well.
 Author is not against Bash or Fish, and plans to implement support
 for them as soon as possible.
+
+### Requirements
+
+* [pyenv](https://github.com/pyenv/pyenv) -- probably the best way to manage python versions
+* [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) -- important extension for pyenv which manages virtualenvs
+* [git](https://git-scm.com) -- version control system for your project
+* [fzf](https://github.com/junegunn/fzf) -- best in class interactive fuzzy finder
 
 ### Installation
 
@@ -37,7 +42,7 @@ git submodule add https://github.com/filipgodlewski/pytomata.git
 ```
 
 Secondly, you will have to source Pytomata into your .zshrc file by,
-for example:
+for example, adding:
 
 ```zsh
 source ~/.local/share/zsh/plugins/pytomata/pytomata.zsh
@@ -48,84 +53,37 @@ chpwd() {
 # which effectively will run `automata` on every `cd` command
 ```
 
-Please note that Pytomata currently requires on
-[fzf](https://github.com/junegunn/fzf). It won't work without it!
-
 ### Usage
 
-Pytomata provides user with couple of commands that can be used straight from the shell:
+Pytomata provides the user with couple of commands that can be used straight from the shell:
 
-```zsh
-addenv
-```
-Add or append `HAS_PYENV_VIRTUALENV='true'` into .env file
-inside your repository.
+`aenv` -- Activate pyenv virtual environment of the current project.
 
-```zsh
-aenv
-```
-Activate an existing pyenv-virtualenv from the fuzzy list.
-Provide name, e.g. `aenv sample_project` in order to
-skip the fuzzy finding.
-Additionally adds $VIRTUAL_ENV into your $PATH
-which is very useful when working with vim.
+`automata` -- Automate virtual environments. Remember to add it into your .zshrc's chpwd() function!
 
-```zsh
-delenv
-```
-Delete any unwanted pyenv-virtualenvs with the fuzzy finding engine
-which supports multi-choice.
+`delenv` -- Delete pyenv virtual environment of the current project.
 
-```zsh
-denv
-```
-Deactivate the current pyenv-virtualenv.
-Restore original $PATH (before pyenv-virtualenv was activated).
+`denv` -- Deactivate pyenv virtual environment of the current project.
 
-```zsh
-mkenv
-```
-Create pyenv-virtualenv for your project.
-If `-y` option was used, it does not prompt for a confirmation
-whether to proceed.
-Automatically upgrades pip to the newest version and installs wheel.
-Finally, runs `addenv` function to setup the automatic workflow.
-Now, whenever you cd into the root of your project, Pytomata will
-automatically activate the virtualenv for you.
-Whenever you step out of the project root, it will be deactivated.
+`listenv` -- List all existing pyenv virtual environments that work with pytomata.
 
-```zsh
-uppip
-```
-Upgrade all your outdated pip packages.
+`mkenv` -- Create pyenv virtual environment for the current project.
 
-```zsh
-upenv
-```
-Upgrade (or downgrade) your active pyenv-virtualenv.
-This function will actually pip freeze your current pip state into
-a temporary file called `TMP_pip_list`, delete your old virtualenv
-and setup a new one.
-Finally, if it finds out that some of the packages are outdated,
-it will ask for an update.
+`upenv` -- Reinstall Python version for the current project.
 
-```zsh
-automata
-```
-The brain of Pytomata. Remember to add it into your .zshrc's chpwd() function!
+`uppip` -- Upgrade all your outdated pip packages for the current project.
 
 ### Development
 
-The Pytomata source code is
-[hosted on GitHub](https://github.com/filipgodlewski/pytomata).
+The Pytomata source code is [hosted on GitHub](https://github.com/filipgodlewski/pytomata).
 It is meant to be clean, simple and easily hackable.
 
 #### Contributing
 
 If you wish to contribute, don't hesitate to do that! I am open for proposals.
 If you have a great idea that you'd like to merge into Pytomata,
-either fork and create a pull request pointing to that repository, or
-write an issue.
+either fork and create a pull request pointing to that repository,
+or write an issue.
 
 #### Version History
 
