@@ -9,12 +9,14 @@ __activate_pytomata_venv() {
     unset dir_path
     PYTOMATA_ON="true"
     export PATH="${VIRTUAL_ENV}:${PATH}"
+    return 0
 }
 
 __add_dir_path() {
     dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
     echo "${dir_path}" >> ${PYTOMATA_FILE}
     unset dir_path
+    return 0
 }
 
 __create_pytomata_venv() {
@@ -23,6 +25,7 @@ __create_pytomata_venv() {
     pyenv virtualenv ${chosen_python} ${dir_path##*/} &> /dev/null || return 1
     unset chosen_python
     unset dir_path
+    return 0
 }
 
 __deactivate_pytomata_venv() {
@@ -30,12 +33,14 @@ __deactivate_pytomata_venv() {
     export PATH="${ORIGINAL_PATH}"
     unset PYTOMATA_ON
     unset ORIGINAL_PATH
+    return 0
 }
 
 __delete_pyenv_venv() {
     dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
     pyenv virtualenv-delete -f ${dir_path##*/} || return 1
     unset dir_path
+    return 0
 }
 
 __is_git_repo() {
@@ -51,6 +56,7 @@ __list_pytomata_venvs() {
     done < ${PYTOMATA_FILE}
     unset stripped
     unset line
+    return 0
 }
 
 __on_venv() {
@@ -75,12 +81,16 @@ __pytomata_venv_exists() {
 
 __delete_pytomata_venv() {
     dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
-    sed "/${1}$/d" ${PYTOMATA_FILE} > ${PYTOMATA_FILE}
+    result=$(sed "/${dir_path##*/}$/d" ${PYTOMATA_FILE})
+    echo ${result} > ${PYTOMATA_FILE}
+    unset result
     unset dir_path
+    return 0
 }
 
 __update_pip_packages() {
     pip list --outdated --format freeze | sed 's/==.*//' | xargs -n1 pip -q install --use-feature=2020-resolver -U
+    return 0
 }
 
 _activate_pytomata_venv() {
@@ -88,7 +98,7 @@ _activate_pytomata_venv() {
     __pytomata_venv_exists || return 1
     __on_pytomata_venv && return 0
     __on_venv && return 1
-    __activate_pytomata_venv
+    __activate_pytomata_venv && return 0
 }
 
 _add_pytomata_venv() {
@@ -106,57 +116,54 @@ _check_pytomata_setup() {
 
 _create_pytomata_venv() {
     __create_pytomata_venv
-    __activate_pytomata_venv
+    __activate_pytomata_venv && return 0
 }
 
 _deactivate_pytomata_venv() {
-    __on_pytomata_venv && __deactivate_pytomata_venv
+    __on_pytomata_venv && {__deactivate_pytomata_venv; return 0} || return 1
 }
 
 _delete_pytomata_venv() {
-    __pytomata_venv_exists || return 1
-    __delete_pyenv_venv || return 1
     __is_git_repo || return 1
-    __delete_pytomata_venv && return 0 || return 1
+    __pytomata_venv_exists || return 1
+    __delete_pytomata_venv || return 1
+    __delete_pyenv_venv && return 0 || return 1
 }
 
 _list_pytomata_venvs() {
-    __list_pytomata_venvs 2> /dev/null || return 1
+    __list_pytomata_venvs 2> /dev/null && return 0 || return 1
 }
 
 _update_pip_packages() {
-    [[ "$(pip list --outdated)" ]] && __update_pip_packages
+    [[ "$(pip list --outdated)" ]] && {__update_pip_packages; return 0} || return 1
 }
 
 aenv() {
     # Activate pyenv virtual environment from the pytomata list.
-    _activate_pytomata_venv || {echo "ERROR: Cannot activate virtual environment."; return 1}
-    return 0
+    _activate_pytomata_venv && return 0 || {echo "ERROR: Cannot activate virtual environment."; return 1}
 }
 
 automata() {
     # Make pyenv virtual environments magical.
-    _activate_pytomata_venv || _deactivate_pytomata_venv
+    _deactivate_pytomata_venv
+    _activate_pytomata_venv
     return 0
 }
 
 delenv() {
     # Delete a pyenv virtual environments from the pytomata list.
     _deactivate_pytomata_venv || {echo "ERROR: Cannot deactivate virtual environment."; return 1}
-    _delete_pytomata_venv || {echo "ERROR: Cannot delete virtual environment."; return 1}
-    return 0
+    _delete_pytomata_venv && return 0 || {echo "ERROR: Cannot delete virtual environment."; return 1}
 }
 
 denv() {
     # Deactivate pyenv virtual environment from the pytomata list.
-    _deactivate_pytomata_venv || {echo "ERROR: Cannot deactivate virtual environment."; return 1}
-    return 0
+    _deactivate_pytomata_venv && return 0 || {echo "ERROR: Cannot deactivate virtual environment."; return 1}
 }
 
 listenv() {
     # List all available virtual environments from the pytomata list along with their git root path.
-    _list_pytomata_venvs || {echo "ERROR: Pytomata list does not exist."; return 1}
-    return 0
+    _list_pytomata_venvs && return 0 || {echo "ERROR: Pytomata list does not exist."; return 1}
 }
 
 mkenv() {
