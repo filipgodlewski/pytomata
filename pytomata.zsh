@@ -21,7 +21,25 @@ __add_dir_path() {
 
 __create_pytomata_venv() {
     dir_path="$(git rev-parse --show-toplevel 2> /dev/null)"
-    chosen_python=$(pyenv versions --bare --skip-aliases | grep -v "/" | fzf --header="Select python version that the virtual environment will be based on.")
+    if hash fzf &> /dev/null; then
+        chosen_python=$(pyenv versions --bare --skip-aliases | grep -v "/" | fzf --header="Select python version that the virtual environment will be based on.")
+    else
+        installed_versions=($(pyenv versions --bare --skip-aliases | grep -v "/"))
+        echo "INFO: Select python version that the virtual environment will be based on."
+        for version in ${installed_versions[@]}; do
+            echo "$version"
+        done
+        echo -n "INPUT: Your answer: "
+        read answer
+        if [[ ${installed_versions[(Ie)${answer}]} -ne 0 ]]; then
+            chosen_python=${answer}
+        else
+            echo "ERROR: Version not available."
+            unset installed_versions
+            return 1
+        fi
+    fi
+    [[ ${#chosen_python} -eq 0 ]] && return 1
     pyenv virtualenv ${chosen_python} ${dir_path##*/} &> /dev/null || return 1
     unset chosen_python
     unset dir_path
@@ -115,7 +133,7 @@ _check_pytomata_setup() {
 }
 
 _create_pytomata_venv() {
-    __create_pytomata_venv
+    __create_pytomata_venv || return 1
     __activate_pytomata_venv && return 0
 }
 
@@ -187,16 +205,16 @@ mkenv() {
 
 upenv() {
     # Change Python version of the target pytomata virtual environment from the pytomata list.
+    trap "rm -f TMP_pip_list_$$; return 0" 0
+    trap "" 2
     _activate_pytomata_venv || {echo "ERROR: Cannot activate virtual environment."; return 1}
     echo "INFO: Upgrading Python version of the current pyenv virtual environment."
-    pip list --format freeze > TMP_pip_list
+    pip list --format freeze > TMP_pip_list_$$
     _deactivate_pytomata_venv || {echo "ERROR: Cannot deactivate virtual environment."; return 1}
     _delete_pytomata_venv || {echo "ERROR: Cannot delete virtual environment."; return 1}
     _create_pytomata_venv || {echo "ERROR: Operation aborted."; return 1}
     _add_pytomata_venv || {echo "ERROR: Adding pytomata venv failed."; return 1}
-    pip -q install -r TMP_pip_list
-    rm TMP_pip_list
-    return 0
+    pip -q install -r TMP_pip_list_$$
 }
 
 uppip() {

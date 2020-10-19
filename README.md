@@ -8,7 +8,7 @@ with the simplest solution for the Python venv headache.
 
 * If you love [Pyenv](https://github.com/pyenv/pyenv) and [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) but don't like the manual work;
 * If you ever forgot to activate virtualenv and installed pip packages globally;
-* If you have heard about direnv but think that it is too much for you needs;
+* If you have heard about direnv but think that it is too much for your needs;
 * If you don't like to bloat your git repository with unnecessary files;
 
 **Then Pytomata is for you!**
@@ -16,8 +16,8 @@ with the simplest solution for the Python venv headache.
 Written in zsh and ready to work on MacOS.
 
 Though Pytomata currently supports only zsh, the goal is to extend
-its functionality into other languages as well.
-Author is not against Bash or Fish, and plans to implement support
+its functionality into other shells as well.
+The author is not against Bash or Fish, and plans to implement support
 for them as soon as possible.
 
 ### Requirements
