@@ -25,6 +25,9 @@ for them as soon as possible.
 * [pyenv](https://github.com/pyenv/pyenv) -- probably the best way to manage python versions
 * [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) -- important extension for pyenv which manages virtualenvs
 * [git](https://git-scm.com) -- version control system for your project
+
+### Optional
+
 * [fzf](https://github.com/junegunn/fzf) -- best in class interactive fuzzy finder
 
 ### Installation
